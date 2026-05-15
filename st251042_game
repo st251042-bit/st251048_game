@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RADWIMPS Context Analyzer: Deep Logic</title>
+    <style>
+        :root {
+            --bg-color: #f0f4f8;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --accent-primary: #4299e1; /* 空のような青 */
+            --accent-secondary: #ed64a6; /* 夕焼けのようなピンク */
+            --glass-bg: rgba(255, 255, 255, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.9);
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: "Hiragino Mincho ProN", "Yu Mincho", serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 40px 20px;
+            box-sizing: border-box;
+            background-image: 
+                linear-gradient(135deg, #e0f2fe 0%, #f0f9ff 50%, #ffe4e6 100%);
+            background-attachment: fixed;
+        }
+
+        .frame {
+            width: 100%;
+            max-width: 850px;
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 60px;
+            position: relative;
+            background: var(--glass-bg);
+            backdrop-filter: blur(15px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
+        }
+
+        .frame::before {
+            content: "";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, transparent, var(--accent-primary), var(--accent-secondary), transparent);
+            border-top-left-radius: 16px;
+            border-top-right-radius: 16px;
+        }
+
+        h1 {
+            font-weight: 300;
+            letter-spacing: 0.5em;
+            text-align: center;
+            font-size: 1.5rem;
+            margin-bottom: 60px;
+            color: var(--text-main);
+            text-indent: 0.5em;
+        }
+
+        .input-label {
+            font-size: 0.75rem;
+            letter-spacing: 0.2em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: block;
+            text-transform: uppercase;
+        }
+
+        textarea {
+            width: 100%;
+            height: 220px;
+            background: rgba(255, 255, 255, 0.5);
+            border: 1px solid rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            color: var(--text-main);
+            font-size: 1.1rem;
+            line-height: 2.2;
+            padding: 25px;
+            box-sizing: border-box;
+            outline: none;
+            transition: all 0.4s ease;
+            font-family: inherit;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            border-color: var(--accent-primary);
+            background: rgba(255, 255, 255, 0.9);
+            box-shadow: 0 0 20px rgba(66, 153, 225, 0.15);
+        }
+
+        .analyze-trigger {
+            margin-top: 40px;
+            width: 100%;
+            background: var(--accent-primary);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            padding: 20px;
+            cursor: pointer;
+            letter-spacing: 0.5em;
+            font-size: 0.95rem;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            text-indent: 0.5em;
+            box-shadow: 0 4px 15px rgba(66, 153, 225, 0.3);
+        }
+
+        .analyze-trigger:hover {
+            background: #3182ce;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(66, 153, 225, 0.4);
+        }
+
+        #result-display {
+            margin-top: 60px;
+            display: none;
+            animation: fadeIn 0.8s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .score-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 40px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+            padding-bottom: 20px;
+        }
+
+        .rad-score {
+            font-size: 6rem;
+            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            font-weight: 700;
+            line-height: 1;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .analysis-card {
+            margin-bottom: 30px;
+        }
+
+        .interpretation {
+            background: rgba(255, 255, 255, 0.6);
+            padding: 30px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            line-height: 2;
+            border-left: 3px solid var(--accent-primary);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02);
+            color: var(--text-main);
+        }
+
+        .deep-logic-tag {
+            display: block;
+            margin-bottom: 15px;
+            color: var(--accent-primary);
+            font-weight: bold;
+            font-size: 0.85rem;
+            letter-spacing: 0.1em;
+        }
+
+        .lyrics-reference {
+            display: block;
+            margin-top: 15px;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-style: italic;
+        }
+
+        .verdict-tag {
+            font-size: 1.1rem;
+            font-weight: bold;
+            letter-spacing: 0.2em;
+            color: var(--accent-secondary);
+        }
+    </style>
+</head>
+<body>
+
+<div class="frame">
+    <h1>LOGIC OF RADWIMPS</h1>
+    
+    <span class="input-label">input your philosophy</span>
+    <div class="input-area">
+        <textarea id="textInput" placeholder="例：この命が借り物だとしたら、僕は誰に感謝を返せばいいのだろう。"></textarea>
+    </div>
+
+    <button class="analyze-trigger" onclick="deepAnalyze()">文脈をスキャンする</button>
+
+    <div id="result-display">
+        <div class="score-container">
+            <div>
+                <div style="font-size: 0.6rem; opacity: 0.5; letter-spacing: 0.2em; margin-bottom: 5px;">YOJIRO NO-DA CONTEXT SCORE</div>
+                <div class="rad-score" id="scoreValue">0</div>
+            </div>
+            <div id="statusTag" class="verdict-tag"></div>
+        </div>
+
+        <div id="analysisContent">
+            <!-- 解析結果が動的に挿入されます -->
+        </div>
+    </div>
+</div>
+
+<script>
+    function deepAnalyze() {
+        const text = document.getElementById('textInput').value;
+        const resDiv = document.getElementById('result-display');
+        const scoreVal = document.getElementById('scoreValue');
+        const analysisContent = document.getElementById('analysisContent');
+        const statusTag = document.getElementById('statusTag');
+        
+        let score = 0;
+        let insights = [];
+
+        // --- 賜物（所有権の無常観）解析 ---
+        if (text.match(/(賜物|たまもの|借り物|返し忘れた|授かった|贈り物|自分のものではない)/)) {
+            score += 35;
+            insights.push({
+                title: "【賜物：所有権の放棄と無常の美】",
+                body: "命や才能、愛する人との時間さえも『自分の所有物』ではなく、世界からの一時的な『借り物（賜物）』として捉える枯淡の境地です。執着を捨てつつ、その借り物の時間をどう愛でるかという、近年の野田洋次郎さんの成熟した死生観が反映されています。",
+                ref: "Related: 賜物 (2018)"
+            });
+        }
+
+        // --- 有心論的解析 ---
+        if (text.includes('心臓') || text.includes('左胸')) {
+            if (text.includes('君') || text.includes('僕')) {
+                score += 30;
+                insights.push({
+                    title: "【有心論：心臓の譲渡と境界線の消失】",
+                    body: "「心臓」を貸し借り可能な『愛の実体』として扱うロジックです。有心論の『2つあったら余るから1つを君にあげる』という、数学的なまでに純粋で傲慢な自己犠牲の文脈を汲み取っています。",
+                    ref: "Related: 有心論 (2006)"
+                });
+            }
+        }
+
+        if (text.includes('ゴミ箱') || text.includes('幸せ')) {
+            score += 20;
+            insights.push({
+                title: "【有心論：幸福の在り処の逆説】",
+                body: "幸せをゴミ箱に捨てるという行為を通じて、逆説的に『君がいる日常』こそが至上であると定義する思考です。既存の価値観を一度地に落としてから、個人の愛を神格化する手法が見られます。",
+                ref: "Related: 有心論 / ギミギミック"
+            });
+        }
+
+        // --- DRAMA GRAND PRIX的解析 ---
+        if (text.match(/(ドラマ|台本|演じ|主役|エキストラ|観客|監督)/)) {
+            score += 25;
+            insights.push({
+                title: "【DRAMA GRAND PRIX：メタ的生存戦略】",
+                body: "人生を茶番劇と定義し、自分をその『不本意な主役』として捉える皮肉な視点です。絶望をエンターテインメントとして昇華し、皮肉を込めて『主演男優賞』を狙うような、野田洋次郎特有の強がりと諦観が混在しています。",
+                ref: "Related: DRAMA GRAND PRIX (2011)"
+            });
+        }
+
+        // --- 宗教・科学・宇宙の混合解析 ---
+        if (text.includes('神様')) {
+            score += 15;
+            insights.push({
+                title: "【対神交渉術：パーソナルな宗教観】",
+                body: "神を絶対的な存在ではなく、交渉相手や論破の対象とする『対等な他者』として描いています。自分の愛を守るために神を必要としながらも、その不条理を許さないRADらしい宗教観です。",
+                ref: "Related: おしゃかしゃま / 救世主"
+            });
+        }
+
+        if (text.match(/(地球|丸い|端っこ|球体)/)) {
+            score += 20;
+            insights.push({
+                title: "【幾何学的平和論：球体の必然性】",
+                body: "「地球が丸いから端っこがない＝誰も泣かない」という、無垢さと詭弁をミックスした、象徴的な平和論へのアプローチが感じられます。",
+                ref: "Related: 有心論"
+            });
+        }
+
+        // スコア表示処理
+        resDiv.style.display = 'block';
+        analysisContent.innerHTML = "";
+        
+        const finalScore = Math.min(score, 100);
+        let currentScore = 0;
+        let timer = setInterval(() => {
+            if (currentScore >= finalScore) {
+                clearInterval(timer);
+                scoreVal.innerText = finalScore;
+            } else {
+                currentScore++;
+                scoreVal.innerText = currentScore;
+            }
+        }, 15);
+
+        // 判定タグ
+        if (finalScore >= 80) statusTag.innerText = "YOJIRO'S CLONE";
+        else if (finalScore >= 50) statusTag.innerText = "DEEP RAD-ISH";
+        else if (finalScore >= 20) statusTag.innerText = "PURE LOGIC";
+        else statusTag.innerText = "NORMAL HUMAN";
+
+        // 解析カード生成
+        if (insights.length === 0) {
+            analysisContent.innerHTML = `
+                <div class="interpretation">
+                    あなたの言葉には、まだ「愛という名の詭弁」や「命の返却期限」が足りません。
+                    もっと心臓をえぐり出し、神様をゴミ箱に捨てるような、
+                    残酷で美しい理屈をぶつけてみてください。
+                </div>`;
+        } else {
+            insights.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "analysis-card";
+                card.innerHTML = `
+                    <div class="interpretation">
+                        <span class="deep-logic-tag">${item.title}</span>
+                        ${item.body}
+                        <span class="lyrics-reference">${item.ref}</span>
+                    </div>
+                `;
+                analysisContent.appendChild(card);
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
